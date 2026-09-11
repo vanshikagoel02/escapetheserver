@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>d.mehta — deployment.py — SAGE Ops</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#070c12;
+  --chrome:#0d1520;
+  --chrome2:#131e2d;
+  --edge:#1e2e42;
+  --edge2:#2b4260;
+  --txt:#e2e8f0;
+  --dim:#94a3b8;
+  --dimmer:#64748b;
+  --grn:#22c55e;
+  --cy:#22d3ee;
+  --mag:#38bdf8;
+  --amb:#f59e0b;
+  --red:#ef4444;
+  --vio:#818cf8;
+  --mono: 'Fira Code', ui-monospace, "Cascadia Mono", "JetBrains Mono", "Consolas", "DejaVu Sans Mono", monospace;
+}
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  margin:0;background:var(--bg);color:var(--txt);
+  font-family:var(--mono);font-size:13px;overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+body::after{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:99;
+  background:repeating-linear-gradient(0deg, rgba(255,255,255,.014) 0 1px, transparent 1px 3px);
+}
+::selection{background:rgba(99,242,165,.25);}
+
+.win{height:100vh;display:grid;grid-template-rows:auto auto 1fr auto minmax(210px,40%) auto;}
+
+/* ---------- title bar ---------- */
+.title{
+  display:flex;align-items:center;gap:14px;padding:8px 12px;
+  background:var(--chrome);border-bottom:3px solid var(--edge);
+}
+.dots{display:flex;gap:5px;}
+.dots i{width:11px;height:11px;display:block;}
+.dots i:nth-child(1){background:#ff6f7e;} .dots i:nth-child(2){background:#ffcb6b;} .dots i:nth-child(3){background:#63f2a5;}
+.who{display:flex;align-items:center;gap:9px;}
+.avatar{
+  width:26px;height:26px;background:var(--chrome2);border:2px solid var(--edge2);
+  color:var(--mag);font-size:11px;font-weight:700;letter-spacing:.5px;
+  display:flex;align-items:center;justify-content:center;
+}
+.who .u{color:var(--txt);}
+.who .u b{font-weight:400;color:var(--mag);}
+.who .u span{color:var(--dimmer);}
+.path{color:var(--dim);font-size:12px;}
+.path b{color:var(--txt);font-weight:400;}
+.replay{
+  margin-left:auto;display:flex;align-items:center;gap:9px;
+  color:var(--dim);font-size:11.5px;letter-spacing:.6px;
+}
+.replay .tag{border:2px solid var(--edge2);color:var(--cy);padding:2px 8px;}
+.replay .ro{color:var(--dimmer);}
+
+/* ---------- tabs ---------- */
+.tabs{display:flex;background:var(--bg);border-bottom:3px solid var(--edge);}
+.tab{
+  font-family:var(--mono);font-size:12px;letter-spacing:1.4px;
+  background:transparent;color:var(--dimmer);border:0;border-right:2px solid var(--edge);
+  padding:9px 20px;cursor:pointer;position:relative;
+}
+.tab:hover{color:var(--txt);background:var(--chrome);}
+.tab[aria-selected="true"]{color:var(--grn);background:var(--chrome2);}
+.tab[aria-selected="true"]::after{content:"";position:absolute;left:0;right:0;bottom:-3px;height:3px;background:var(--grn);}
+.tab:focus-visible{outline:2px solid var(--cy);outline-offset:-4px;}
+.tabhint{margin-left:auto;align-self:center;padding:0 14px;color:var(--dimmer);font-size:11px;}
+
+/* ---------- editor ---------- */
+.editor{display:grid;grid-template-columns:56px 1fr;min-height:0;background:#0a1018;}
+.gutter{background:var(--bg);border-right:2px solid var(--edge);overflow:hidden;padding:14px 0;text-align:right;}
+.gutter div{font-size:13px;line-height:21px;padding-right:11px;color:#3f5064;}
+.gutter div.err{color:var(--red);}
+.gutter div.err::before{content:"\2022 ";}
+.pane{position:relative;min-height:0;}
+.layer{
+  position:absolute;inset:0;margin:0;border:0;padding:14px 18px;
+  font-family:var(--mono);font-size:13px;line-height:21px;white-space:pre;tab-size:4;
+}
+#hl{overflow:auto;pointer-events:none;color:#93a8c0;scrollbar-width:none;}
+#hl::-webkit-scrollbar{display:none;}
+#src{overflow:auto;background:transparent;color:transparent;caret-color:var(--grn);resize:none;outline:none;}
+.t-kw{color:var(--vio);} .t-str{color:var(--amb);} .t-com{color:#4a6076;font-style:italic;}
+.t-num{color:var(--cy);} .t-pre{color:var(--mag);}
+
+/* ---------- toolbar ---------- */
+.bar{
+  display:flex;align-items:center;gap:9px;padding:8px 12px;
+  background:var(--chrome);border-top:3px solid var(--edge);border-bottom:3px solid var(--edge);flex-wrap:wrap;
+}
+button.b{
+  font-family:var(--mono);font-size:11.5px;letter-spacing:1.2px;
+  background:var(--chrome2);color:var(--txt);border:2px solid var(--edge2);
+  padding:7px 12px;cursor:pointer;box-shadow:3px 3px 0 rgba(0,0,0,.55);
+}
+button.b:hover{background:#243349;}
+button.b:active{transform:translate(2px,2px);box-shadow:1px 1px 0 rgba(0,0,0,.55);}
+button.b:focus-visible{outline:2px solid var(--cy);outline-offset:2px;}
+button.run{background:var(--grn);color:#06130c;border-color:#a9ffd2;font-weight:700;}
+button.run:hover{background:#8dffc0;}
+button.ghost{background:transparent;color:var(--dim);border-color:var(--edge);box-shadow:none;}
+button.ghost:hover{color:var(--txt);background:var(--chrome2);}
+.prog{margin-left:auto;display:flex;align-items:center;gap:9px;font-size:11.5px;color:var(--dim);letter-spacing:.8px;}
+.pips{display:flex;gap:3px;}
+.pips i{width:16px;height:8px;background:var(--edge);display:block;}
+.pips i.fixed{background:var(--grn);}
+
+/* ---------- console ---------- */
+.out{
+  background:#070b11;overflow-y:auto;min-height:0;
+  padding:16px 22px 30px;font-size:14px;line-height:1.78;letter-spacing:.1px;
+}
+.out .l{white-space:pre-wrap;word-break:break-word;}
+.c-dim{color:#8296ad;} .c-fade{color:#5d7188;}
+.c-ok{color:var(--grn);} .c-warn{color:var(--amb);} .c-err{color:var(--red);}
+.c-cy{color:var(--cy);} .c-vi{color:var(--vio);} .c-mag{color:var(--mag);} .c-hd{color:#eaf2fb;}
+.cmd{color:var(--cy);}
+.cmd b{color:var(--grn);font-weight:400;}
+.gap{height:12px;}
+.cursor{display:inline-block;width:9px;height:15px;background:var(--grn);vertical-align:-3px;animation:bl 1.05s steps(1) infinite;}
+@keyframes bl{50%{opacity:0}}
+@media (prefers-reduced-motion: reduce){.cursor{animation:none}}
+
+/* ---------- status bar ---------- */
+.status{
+  display:flex;align-items:center;gap:0;background:var(--chrome);border-top:3px solid var(--edge);
+  font-size:11px;color:var(--dim);letter-spacing:.7px;
+}
+.status span{padding:6px 12px;border-right:2px solid var(--edge);}
+.status .grow{margin-left:auto;border-right:0;border-left:2px solid var(--edge);}
+.status .lang{color:var(--vio);}
+.status .st-ok{color:var(--grn);} .status .st-bad{color:var(--red);}
+
+.out::-webkit-scrollbar,#src::-webkit-scrollbar{width:11px;height:11px;}
+.out::-webkit-scrollbar-thumb,#src::-webkit-scrollbar-thumb{background:var(--edge2);}
+.out::-webkit-scrollbar-track,#src::-webkit-scrollbar-track{background:var(--bg);}
+
+@media (max-width:900px){
+  body{overflow:auto;} .win{height:auto;grid-template-rows:auto auto 400px auto 340px auto;}
+  .tabhint{display:none;} .path{display:none;}
+}
+</style>
+</head>
+<body>
+<div class="win">
+
+  <div class="title">
+    <div class="dots"><i></i><i></i><i></i></div>
+    <div class="who">
+      <div class="avatar">DM</div>
+      <div class="u"><b>d.mehta</b><span>@sage-ops-03</span></div>
+    </div>
+    <div class="path">~/rollback/<b id="t-file">deployment.py</b></div>
+    <div class="replay">
+      <span class="tag">SESSION REPLAY</span>
+      <span>02:51 &rarr; 03:41</span>
+      <span class="ro">read-only archive</span>
+    </div>
+  </div>
+
+  <div class="tabs" role="tablist" aria-label="Runtime">
+    <button class="tab" role="tab" data-lang="python" aria-selected="true">python</button>
+    <button class="tab" role="tab" data-lang="c" aria-selected="false">c</button>
+    <button class="tab" role="tab" data-lang="cpp" aria-selected="false">c++</button>
+    <button class="tab" role="tab" data-lang="java" aria-selected="false">java</button>
+    <div class="tabhint">same rollback, mirrored across the build pipeline &mdash; pick the language your team reads fastest</div>
+  </div>
+
+  <div class="editor">
+    <div class="gutter" id="gutter" aria-hidden="true"></div>
+    <div class="pane">
+      <pre class="layer" id="hl" aria-hidden="true"></pre>
+      <textarea class="layer" id="src" spellcheck="false" wrap="off" autocomplete="off"
+                aria-label="Archived source of the rollback script"></textarea>
+    </div>
+  </div>
+
+  <div class="bar">
+    <button class="b run" id="runBtn">&#9654; run replay</button>
+    <button class="b" id="clearBtn">clear</button>
+    <button class="b ghost" id="resetBtn">restore archive</button>
+    <button class="b ghost" id="hintBtn">hint &middot; <span id="hintN">0</span></button>
+    <div class="prog">
+      <span id="progTxt">5 faults in archive</span>
+      <div class="pips" id="pips"></div>
+    </div>
+  </div>
+
+  <div class="out" id="out" aria-live="polite"></div>
+
+  <div class="status">
+    <span id="s-pos">Ln 1, Col 1</span>
+    <span>spaces: 4</span>
+    <span>UTF-8</span>
+    <span>LF</span>
+    <span class="lang" id="s-runtime">CPython 3.9.6</span>
+    <span class="grow" id="s-state">archive damaged</span>
+  </div>
+
+</div>
+
+<script>
+"use strict";
+
+const PY = `# deployment.py  —  SAGE PERMISSION ROLLBACK
+# operator : d.mehta        started : 02:51
+# purpose  : undo the permission expansion issued one month ago
+# status   : INTERRUPTED
+# do not run against live SAGE without an intent declaration
+
+INTENT    = "PERMISSION_REPAIR"
+OPERATOR  = "d.mehta"
+INTEGRITY = 39
+
+GRANTED  = ["r.sharma", "a.rao", "n.batra", "k.verma", "p.menon", "s.iqbal"]
+REQUIRED = ["r.sharma", "a.rao"]
+TABLES   = ["ACCESS_CONTROL", "EMPLOYEE_AUTH", "SAGE_PERMISSIONS", "GRANT_LEDGER"]
+PERMISSION_TABLES = ["ACCESS_CONTROL", "EMPLOYEE_AUTH", "SAGE_PERMISSIONS"]
+
+
+def banner(title):
+    print("=" * 46)
+    print(title)
+    print("=" * 46)
+
+
+def count_excess(granted, required):
+    extra = 0
+    for user in granted:
+        if user not in required:
+            extra = extra + 1
+    return extra
+
+
+def revoke_excess(granted, required)
+    removed = []
+    for user in granted:
+        if user not in required:
+        removed.append(user)
+    return removed
+
+
+def scan_tables(tables):
+    touched = []
+    for i in range(1, len(tables)):
+        touched.append(tables[i])
+    return touched
+
+
+def access_mode(table):
+    if table in PERMISSION_TABLES:
+        return "WRITE (rollback)"
+    return "NOT ACCESSED"
+
+
+def verify(integrity):
+    if integrity = 39:
+        return "DEGRADED"
+    return "STABLE"
+
+
+def report(tables):
+    for table in tables:
+        print("   ", table, "->", access_mode(table))
+
+
+banner("SAGE PERMISSION ROLLBACK")
+
+print("OPERATOR:", OPERATOR)
+print("INTENT:", INTENT)
+print("EXTRA ACCOUNTS:", count_excess(GRANTED, REQUIRED))
+
+revoked = revoke_excess(GRANTED, REQUIRED)
+scanned = scan_tables(TABLES)
+
+print("REVOKED:", revokd)
+print("SCANNED:", len(scanned), "of", len(TABLES))
+report(scanned)
+print("STATE:", verify(INTEGRITY))
+`;
+
+const C = `/* deployment.c  —  SAGE PERMISSION ROLLBACK            */
+/* operator : d.mehta        started : 02:51            */
+/* purpose  : undo the permission expansion issued      */
+/*            one month ago                             */
+/* status   : INTERRUPTED                               */
+
+#include <stdlib.h>
+#include <string.h>
+
+#define ACCOUNTS 6
+#define REQUIRED 2
+#define TABLES   4
+
+void banner(char *title) {
+    printf("==============================================\\n");
+    printf("%s\\n", title);
+    printf("==============================================\\n");
+}
+
+int count_excess(int total, int required) {
+    int extra = 0;
+    for (int i = 0; i < total; i++) {
+        if (i >= required) {
+            extra++;
+        }
+    }
+    return extra;
+}
+
+char *access_mode(char *table) {
+    if (strcmp(table, "GRANT_LEDGER") == 0) {
+        return "NOT ACCESSED";
+    }
+    return "WRITE (rollback)";
+}
+
+int main(void) {
+    char *granted[ACCOUNTS] = {"r.sharma", "a.rao", "n.batra",
+                               "k.verma", "p.menon", "s.iqbal"};
+    char *tables[TABLES] = {"ACCESS_CONTROL", "EMPLOYEE_AUTH",
+                            "SAGE_PERMISSIONS", "GRANT_LEDGER"};
+
+    int revoked = 0
+    int integrity = 39;
+
+    banner("SAGE PERMISSION ROLLBACK");
+
+    printf("OPERATOR: d.mehta\\n");
+    printf("INTENT: PERMISSION_REPAIR\\n");
+    printf("EXTRA ACCOUNTS: %d\\n", count_excess(ACCOUNTS, REQUIRED));
+
+    for (int i = 0; i <= ACCOUNTS; i++) {
+        if (i >= REQUIRED) {
+            printf("REVOKE -> %d\\n", granted[i]);
+            revoked++;
+        }
+    }
+
+    for (int i = 0; i < TABLES; i++) {
+        printf("    %s -> %s\\n", tables[i], access_mode(tables[i]));
+    }
+
+    if (integrity = 39) {
+        printf("STATE: DEGRADED\\n");
+    }
+
+    printf("REVOKED: %d\\n", revoked);
+    return 0;
+}
+`;
+
+const CPP = `// deployment.cpp  —  SAGE PERMISSION ROLLBACK
+// operator : d.mehta        started : 02:51
+// purpose  : undo the permission expansion issued one month ago
+// status   : INTERRUPTED
+
+#include <iostream>
+#include <string>
+
+const int ACCOUNTS = 6;
+const int REQUIRED = 2;
+const int TABLES   = 4;
+
+void banner(string title) {
+    cout << "==============================================" << endl;
+    cout << title << endl;
+    cout << "==============================================" << endl;
+}
+
+int count_excess(int total, int required) {
+    int extra = 0;
+    for (int i = 0; i < total; i++) {
+        if (i >= required) {
+            extra++;
+        }
+    }
+    return extra;
+}
+
+string access_mode(string table) {
+    if (table == "GRANT_LEDGER") {
+        return "NOT ACCESSED";
+    }
+    return "WRITE (rollback)";
+}
+
+int main() {
+    string granted[ACCOUNTS] = {"r.sharma", "a.rao", "n.batra",
+                                "k.verma", "p.menon", "s.iqbal"};
+    string tables[TABLES] = {"ACCESS_CONTROL", "EMPLOYEE_AUTH",
+                             "SAGE_PERMISSIONS", "GRANT_LEDGER"};
+
+    int revoked   = 0;
+    int integrity = 39
+
+    banner("SAGE PERMISSION ROLLBACK");
+
+    cout << "OPERATOR: d.mehta" << endl;
+    cout << "INTENT: PERMISSION_REPAIR" << endl;
+    cout << "EXTRA ACCOUNTS: " << count_excess(ACCOUNTS, REQUIRED) << endl;
+
+    for (int i = 0; i <= ACCOUNTS; i++) {
+        if (i >= REQUIRED) {
+            cout << "REVOKE -> " << granted[i] << endl;
+            revoked++;
+        }
+    }
+
+    for (int i = 0; i < TABLES; i++) {
+        cout << "    " << tables[i] << " -> " << access_mode(tables[i]) << endll;
+    }
+
+    if (integrity = 39) {
+        cout << "STATE: DEGRADED" << endl;
+    }
+
+    cout << "REVOKED: " << revoked << endl;
+    return 0;
+}
+`;
+
+const JAVA = `// Deployment.java  —  SAGE PERMISSION ROLLBACK
+// operator : d.mehta        started : 02:51
+// purpose  : undo the permission expansion issued one month ago
+// status   : INTERRUPTED
+
+public class Deployment {
+
+    static final int ACCOUNTS = 6;
+    static final int REQUIRED = 2;
+
+    static void banner(String title) {
+        System.out.println("==============================================");
+        System.out.println(title);
+        System.out.println("==============================================");
+    }
+
+    static int countExcess(int total, int required) {
+        int extra = 0;
+        for (int i = 0; i < total; i++) {
+            if (i >= required) {
+                extra++;
+            }
+        }
+        return extra;
+    }
+
+    static String accessMode(String table) {
+        if (table.equals("GRANT_LEDGER")) {
+            return "NOT ACCESSED";
+        }
+        return "WRITE (rollback)";
+    }
+
+    public static void Main(String[] args) {
+        string[] granted = {"r.sharma", "a.rao", "n.batra",
+                            "k.verma", "p.menon", "s.iqbal"};
+        String[] tables = {"ACCESS_CONTROL", "EMPLOYEE_AUTH",
+                           "SAGE_PERMISSIONS", "GRANT_LEDGER"};
+
+        int revoked   = 0;
+        int integrity = 39
+
+        banner("SAGE PERMISSION ROLLBACK");
+
+        System.out.println("OPERATOR: d.mehta");
+        System.out.println("INTENT: PERMISSION_REPAIR");
+        System.out.println("EXTRA ACCOUNTS: " + countExcess(ACCOUNTS, REQUIRED));
+
+        for (int i = 0; i <= granted.length; i++) {
+            if (i >= REQUIRED) {
+                System.out.printLn("REVOKE -> " + granted[i]);
+                revoked++;
+            }
+        }
+
+        for (int i = 0; i < tables.length; i++) {
+            System.out.println("    " + tables[i] + " -> " + accessMode(tables[i]));
+        }
+
+        System.out.println("REVOKED: " + revoked);
+        System.out.println("STATE: " + (integrity < 40 ? "DEGRADED" : "STABLE"));
+    }
+}
+`;
+
+/* helper: leading-space count */
+const ind = s => s.length - s.replace(/^\s*/, "").length;
+const findLine = (lines, re) => { const i = lines.findIndex(l => re.test(l)); return i < 0 ? 0 : i + 1; };
+
+const LANGS = {
+  python: {
+    label:"PYTHON", file:"deployment.py", runtime:"CPython 3.9.6", cmd:"python3 deployment.py",
+    src:PY,
+    hl:/(#[^\n]*|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|\b\d+\b|\b(?:def|for|in|if|not|return|len|range|print|import|while|else|elif|True|False|None)\b)/g,
+    guard:[/def\s+banner/, /def\s+count_excess/, /def\s+revoke_excess/, /def\s+scan_tables/,
+           /def\s+access_mode/, /def\s+verify/, /def\s+report/, /GRANTED\s*=/, /TABLES\s*=/,
+           /print\s*\(\s*"SCANNED:"/, /print\s*\(\s*"STATE:"/, /report\s*\(\s*scanned\s*\)/],
+    faults:[
+      { id:"F01", kind:"SYNTAX", anchor:/def\s+revoke_excess/, tail:true,
+        test:(c)=>/def\s+revoke_excess\s*\([^)]*\)\s*:/.test(c),
+        msg:"SyntaxError: expected ':'",
+        hint:"Python needs one character to say \u201Cthe block starts here.\u201D Compare this function header with the six that work." },
+      { id:"F02", kind:"INDENTATION", anchor:/removed\.append\s*\(\s*user\s*\)/,
+        test:(c,L)=>{ const a=L.findIndex(l=>/removed\.append\s*\(\s*user\s*\)/.test(l)),
+                            b=L.findIndex(l=>/if\s+user\s+not\s+in\s+required/.test(l));
+                      return a>-1 && b>-1 && ind(L[a])>ind(L[b]); },
+        msg:"IndentationError: expected an indented block after 'if' statement",
+        hint:"One line sits level with the condition above it instead of underneath it. count_excess() has the same shape done correctly \u2014 compare them." },
+      { id:"F03", kind:"LOOP RANGE", anchor:/for\s+i\s+in\s+range/,
+        test:(c)=>/for\s+i\s+in\s+range\s*\(\s*len\s*\(\s*tables\s*\)\s*\)\s*:/.test(c),
+        msg:"AssertionError: table scan incomplete \u2014 expected 4 rows, got 3 (first table never read)",
+        hint:"Count what the loop actually visits. Lists start at 0, and this one starts somewhere else, so the first table is silently skipped." },
+      { id:"F04", kind:"COMPARISON", anchor:/if\s+integrity/,
+        test:(c)=>/if\s+integrity\s*==\s*39\s*:/.test(c),
+        msg:"SyntaxError: invalid syntax. Maybe you meant '==' or ':=' instead of '='?",
+        hint:"Assigning a value and asking a question are two different operations. One of them cannot go inside an `if`." },
+      { id:"F05", kind:"NAME", anchor:/print\s*\(\s*"REVOKED:"/,
+        test:(c)=>/print\s*\(\s*"REVOKED:"\s*,\s*revoked\s*\)/.test(c),
+        msg:"NameError: name 'revokd' is not defined. Did you mean: 'revoked'?",
+        hint:"Read the variable being printed letter by letter, then read the one that was actually created a few lines above." }
+    ]
+  },
+
+  c: {
+    label:"C", file:"deployment.c", runtime:"gcc 11.4.0", cmd:"gcc deployment.c -o rollback && ./rollback",
+    src:C,
+    hl:/(\/\*[\s\S]*?\*\/|\/\/[^\n]*|#\w+|"(?:[^"\\]|\\.)*"|\b\d+\b|\b(?:int|char|void|for|if|else|return|main|printf|strcmp)\b)/g,
+    guard:[/int\s+main/, /void\s+banner/, /int\s+count_excess/, /access_mode/, /revoked\+\+/,
+           /"REVOKED: %d/, /"EXTRA ACCOUNTS: %d/],
+    faults:[
+      { id:"F01", kind:"MISSING HEADER", anchor:/printf\s*\(\s*"=+/,
+        test:(c)=>/#\s*include\s*<\s*stdio\.h\s*>/.test(c),
+        msg:"warning: implicit declaration of function 'printf' [-Wimplicit-function-declaration]",
+        hint:"The program calls a function it was never introduced to. Every standard function lives in a header, and the one for console input/output is missing from the top of the file." },
+      { id:"F02", kind:"TERMINATOR", anchor:/int\s+revoked\s*=\s*0/, tail:true,
+        test:(c)=>/int\s+revoked\s*=\s*0\s*;/.test(c),
+        msg:"error: expected ';' before 'int'",
+        hint:"The compiler complains about the line *after* the real mistake. That is what happens when a statement never ends." },
+      { id:"F03", kind:"LOOP BOUND", anchor:/i\s*<=?\s*ACCOUNTS\s*;/,
+        test:(c)=>/for\s*\(\s*int\s+i\s*=\s*0\s*;\s*i\s*<\s*ACCOUNTS\s*;/.test(c),
+        msg:"runtime: index 6 is out of bounds for array 'granted' of length 6",
+        hint:"Six names, indexes 0 to 5. count_excess() stops at the right place \u2014 this loop uses a different comparison operator." },
+      { id:"F04", kind:"FORMAT SPECIFIER", anchor:/printf\s*\(\s*"REVOKE/,
+        test:(c)=>/"REVOKE\s*->\s*%s\\n"/.test(c),
+        msg:"warning: format '%d' expects argument of type 'int', but argument 2 has type 'char *' [-Wformat=]",
+        hint:"The value being printed is a name, not a number. The placeholder inside the quotes does not match what is handed to it." },
+      { id:"F05", kind:"COMPARISON", anchor:/if\s*\(\s*integrity/,
+        test:(c)=>/if\s*\(\s*integrity\s*==\s*39\s*\)/.test(c),
+        msg:"warning: suggest parentheses around assignment used as truth value [-Wparentheses]",
+        hint:"This condition sets a value instead of testing one, so it can never be false. access_mode() shows the operator you want." }
+    ]
+  },
+
+  cpp: {
+    label:"C++", file:"deployment.cpp", runtime:"g++ 11.4.0", cmd:"g++ deployment.cpp -o rollback && ./rollback",
+    src:CPP,
+    hl:/(\/\*[\s\S]*?\*\/|\/\/[^\n]*|#\w+|"(?:[^"\\]|\\.)*"|\b\d+\b|\b(?:int|const|for|if|else|return|main|using|namespace|std|string|cout|endl|void)\b)/g,
+    guard:[/int\s+main/, /void\s+banner/, /int\s+count_excess/, /access_mode/, /revoked\+\+/,
+           /"REVOKED: "/, /"EXTRA ACCOUNTS: "/],
+    faults:[
+      { id:"F01", kind:"SCOPE", anchor:/void\s+banner\s*\(/,
+        test:(c)=>/using\s+namespace\s+std\s*;/.test(c),
+        msg:"error: 'string' was not declared in this scope (also 'cout', 'endl')",
+        hint:"string, cout and endl all live in the standard namespace, and nothing in this file brings that namespace into scope. One line under the includes fixes all three." },
+      { id:"F02", kind:"TERMINATOR", anchor:/int\s+integrity\s*=\s*39/, tail:true,
+        test:(c)=>/int\s+integrity\s*=\s*39\s*;/.test(c),
+        msg:"error: expected ';' before 'banner'",
+        hint:"The error points at the next statement, but that statement is fine. Look at the last declaration above it." },
+      { id:"F03", kind:"LOOP BOUND", anchor:/i\s*<=?\s*ACCOUNTS\s*;/,
+        test:(c)=>/for\s*\(\s*int\s+i\s*=\s*0\s*;\s*i\s*<\s*ACCOUNTS\s*;/.test(c),
+        msg:"runtime: index 6 is out of bounds for array 'granted' of length 6",
+        hint:"Six names, indexes 0 to 5. count_excess() stops at the right place \u2014 this loop uses a different comparison operator." },
+      { id:"F04", kind:"IDENTIFIER", anchor:/access_mode\s*\(\s*tables/,
+        test:(c)=>!/endll/.test(c) && /access_mode\s*\(\s*tables\s*\[\s*i\s*\]\s*\)\s*<<\s*(?:std::)?endl\s*;/.test(c),
+        msg:"error: 'endll' was not declared in this scope; did you mean 'endl'?",
+        hint:"One line ending is spelled with a letter too many. Every other output line in the file spells it correctly." },
+      { id:"F05", kind:"COMPARISON", anchor:/if\s*\(\s*integrity/,
+        test:(c)=>/if\s*\(\s*integrity\s*==\s*39\s*\)/.test(c),
+        msg:"warning: suggest parentheses around assignment used as truth value [-Wparentheses]",
+        hint:"This condition sets a value instead of testing one, so it can never be false. access_mode() shows the operator you want." }
+    ]
+  },
+
+  java: {
+    label:"JAVA", file:"Deployment.java", runtime:"OpenJDK 17.0.9", cmd:"javac Deployment.java && java Deployment",
+    src:JAVA,
+    hl:/(\/\*[\s\S]*?\*\/|\/\/[^\n]*|"(?:[^"\\]|\\.)*"|\b\d+\b|\b(?:public|static|final|void|class|int|String|for|if|else|return|new|System)\b)/g,
+    guard:[/class\s+Deployment/, /static\s+void\s+banner/, /countExcess/, /accessMode/, /revoked\+\+/,
+           /"REVOKED: "/, /"EXTRA ACCOUNTS: "/],
+    faults:[
+      { id:"F01", kind:"ENTRY POINT", anchor:/static\s+void\s+\w+\s*\(\s*String\s*\[/,
+        test:(c)=>/public\s+static\s+void\s+main\s*\(\s*String\s*\[\s*\]\s*\w+\s*\)/.test(c),
+        msg:"Error: Main method not found in class Deployment \u2014 define it as: public static void main(String[] args)",
+        hint:"Java is case sensitive, and it will only start a program from a method with one exact name, spelled one exact way." },
+      { id:"F02", kind:"TYPE", anchor:/\w+\s*\[\s*\]\s*granted/,
+        test:(c)=>/String\s*\[\s*\]\s*granted/.test(c),
+        msg:"error: cannot find symbol \u2014 symbol: class string, location: class Deployment",
+        hint:"Java's text type is a class, not a primitive. Compare this declaration with the one directly beneath it." },
+      { id:"F03", kind:"TERMINATOR", anchor:/int\s+integrity\s*=\s*39/, tail:true,
+        test:(c)=>/int\s+integrity\s*=\s*39\s*;/.test(c),
+        msg:"error: ';' expected",
+        hint:"One declaration never ends. The compiler reports it at the end of that line." },
+      { id:"F04", kind:"LOOP BOUND", anchor:/i\s*<=?\s*granted\s*\.\s*length/,
+        test:(c)=>/i\s*<\s*granted\s*\.\s*length\s*;/.test(c),
+        msg:"Exception in thread \"main\" java.lang.ArrayIndexOutOfBoundsException: Index 6 out of bounds for length 6",
+        hint:"An array of length 6 has a last index of 5. The tables loop below stops correctly \u2014 this one does not." },
+      { id:"F05", kind:"METHOD NAME", anchor:/System\s*\.\s*out\s*\.\s*\w+\s*\(\s*"REVOKE/,
+        test:(c)=>!/printLn/.test(c) && /System\s*\.\s*out\s*\.\s*println\s*\(\s*"REVOKE/.test(c),
+        msg:"error: cannot find symbol \u2014 symbol: method printLn(String), location: variable out of type PrintStream",
+        hint:"Compare this print call with the eight others in the file. One character is capitalised differently." }
+    ]
+  }
+};
+
+
+/* ============================ ELEMENTS ============================ */
+const $ = id => document.getElementById(id);
+const srcEl=$("src"), hlEl=$("hl"), gutEl=$("gutter"), outEl=$("out"),
+      progEl=$("progTxt"), pipsEl=$("pips"), stateEl=$("s-state"), posEl=$("s-pos");
+
+let lang="python", solved=false, running=false, hintsUsed=0, hintedIds=[], errLines=[], lastResults=null;
+
+(function(){ for(let i=0;i<5;i++) pipsEl.appendChild(document.createElement("i")); })();
+
+/* ============================ HIGHLIGHTING ============================ */
+const esc = s => s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+function classify(t, lg){
+  if(t.startsWith("//")||t.startsWith("/*")) return "com";
+  if(t[0]==="#") return lg==="python" ? "com" : "pre";
+  if(t[0]==='"'||t[0]==="'") return "str";
+  if(/^\d/.test(t)) return "num";
+  return "kw";
+}
+function paint(){
+  const code=srcEl.value, re=LANGS[lang].hl;
+  re.lastIndex=0;
+  let out="", last=0, m;
+  while((m=re.exec(code))!==null){
+    out+=esc(code.slice(last,m.index));
+    out+='<span class="t-'+classify(m[0],lang)+'">'+esc(m[0])+"</span>";
+    last=re.lastIndex;
+    if(m.index===re.lastIndex) re.lastIndex++;
+  }
+  out+=esc(code.slice(last));
+  hlEl.innerHTML=out+"\n\n";
+  const n=code.split("\n").length;
+  let g="";
+  for(let i=1;i<=n;i++) g+='<div class="'+(errLines.includes(i)?"err":"")+'">'+i+"</div>";
+  gutEl.innerHTML=g;
+  syncScroll();
+}
+function syncScroll(){
+  hlEl.scrollTop=srcEl.scrollTop; hlEl.scrollLeft=srcEl.scrollLeft;
+  gutEl.scrollTop=srcEl.scrollTop;
+}
+function updatePos(){
+  const upto=srcEl.value.slice(0,srcEl.selectionStart).split("\n");
+  posEl.textContent="Ln "+upto.length+", Col "+(upto[upto.length-1].length+1);
+}
+srcEl.addEventListener("scroll", syncScroll);
+srcEl.addEventListener("input", ()=>{ errLines=[]; paint(); updatePos(); markDirty(); });
+["click","keyup","select"].forEach(e=>srcEl.addEventListener(e, updatePos));
+srcEl.addEventListener("keydown", e=>{
+  if(e.key==="Tab"){
+    e.preventDefault();
+    const s=srcEl.selectionStart, en=srcEl.selectionEnd, v=srcEl.value;
+    srcEl.value=v.slice(0,s)+"    "+v.slice(en);
+    srcEl.selectionStart=srcEl.selectionEnd=s+4;
+    errLines=[]; paint(); updatePos(); markDirty();
+  }
+});
+function markDirty(){
+  if(solved) return;
+  stateEl.className="grow";
+  stateEl.textContent="edited \u2014 run to re-check";
+}
+function setPips(n){
+  [...pipsEl.children].forEach((p,i)=>{ p.className = (i < (n||0)) ? "fixed" : ""; });
+}
+
+/* ============================ OUTPUT ============================ */
+function line(text, cls){
+  const d=document.createElement("div");
+  d.className="l "+(cls||"");
+  d.textContent=text;
+  outEl.appendChild(d); outEl.scrollTop=outEl.scrollHeight;
+  return d;
+}
+function html(h, cls){
+  const d=document.createElement("div");
+  d.className="l "+(cls||"");
+  d.innerHTML=h;
+  outEl.appendChild(d); outEl.scrollTop=outEl.scrollHeight;
+  return d;
+}
+function gap(){ const d=document.createElement("div"); d.className="gap"; outEl.appendChild(d); }
+function prompt(cmd){
+  html('<span class="cmd"><b>d.mehta@sage-ops-03</b>:~/rollback$ </span>'+esc(cmd), "cmd");
+}
+const wait = ms => new Promise(r=>setTimeout(r,ms));
+const GLITCH = "\u2591\u2592\u2593#%&@*+=/\\|<>~^";
+const scramble = n => Array.from({length:n},()=>GLITCH[Math.floor(Math.random()*GLITCH.length)]).join("");
+
+/* ============================ SESSION LOAD ============================ */
+function loadLang(key){
+  lang=key; solved=false; running=false; errLines=[]; lastResults=null;
+  const L=LANGS[key];
+  srcEl.value=L.src;
+  $("t-file").textContent=L.file;
+  $("s-runtime").textContent=L.runtime;
+  document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-selected", String(t.dataset.lang===key)));
+  paint(); updatePos(); setPips(0);
+  progEl.textContent="0 of 5 corrected";
+  stateEl.className="grow"; stateEl.textContent="archive damaged";
+  outEl.innerHTML="";
+  prompt("sage-replay --session dmehta_0251 --until 03:41");
+  line("archived session, read-only. every timestamp below is from that night \u2014 nothing here is live.", "c-fade");
+  line("the recovered copy of "+L.file+" is damaged, so the replay cannot execute it.", "c-fade");
+  line("repair the source above, then run the replay to see what it printed.", "c-fade");
+  gap();
+  html('<span class="c-fade">waiting</span><span class="cursor"></span>');
+}
+
+/* ============================ RUN ============================ */
+async function run(){
+  if(running) return;
+  running=true;
+  const L=LANGS[lang], code=srcEl.value, lines=code.split("\n");
+
+  outEl.innerHTML="";
+  prompt(L.cmd);
+  await wait(240);
+  line("["+L.runtime+"] parsing "+L.file+" \u2026", "c-fade");
+  await wait(330);
+
+  const missing = L.guard.filter(g=>!g.test(code));
+  if(missing.length){
+    gap();
+    line("fatal: the archive no longer matches the session manifest.", "c-err");
+    line("lines from the original script are missing. repair the faults \u2014 do not delete them.", "c-err");
+    line("press \u201Crestore archive\u201D to load the damaged original again.", "c-warn");
+    stateEl.className="grow st-bad"; stateEl.textContent="manifest mismatch";
+    running=false; return;
+  }
+
+  const results = L.faults.map(f=>{ try{ return !!f.test(code, lines); }catch(e){ return false; } });
+  lastResults=results;
+  const fails = L.faults.filter((f,i)=>!results[i]);
+  const cleared = 5 - fails.length;
+  errLines=[]; paint(); setPips(cleared);
+
+  if(fails.length){
+    gap();
+    line("build failed \u2014 the replay did not run.", "c-err");
+    line(cleared+" of 5 faults corrected.", cleared ? "c-ok" : "c-warn");
+    line(fails.length===1
+          ? "one fault left in the file."
+          : fails.length+" faults left in the file.", "c-fade");
+    progEl.textContent=cleared+" of 5 corrected";
+    stateEl.className="grow st-bad";
+    stateEl.textContent=fails.length+" fault"+(fails.length>1?"s":"")+" remaining";
+    running=false; return;
+  }
+
+  /* ---------- all clear: replay ---------- */
+  solved=true;
+  try { window.parent.postMessage({ type: "RECOVERY_CODE_SOLVED" }, "*"); } catch(e) {}
+  progEl.textContent="5 of 5 corrected";
+  stateEl.className="grow st-ok"; stateEl.textContent="replaying archive";
+
+  gap();
+  line("build ok \u2014 0 errors, 0 warnings", "c-ok");
+  await wait(340);
+  line("replaying archived stdout of session dmehta_0251 \u2026", "c-fade");
+  await wait(420);
+  gap();
+
+  const SCRIPT = [
+    ["[02:51:04]  session opened \u2014 d.mehta, AI-Ops lead","c-hd",280],
+    ["[02:51:04]  declared intent: PERMISSION_REPAIR","c-dim",190],
+    ["[02:51:09]  read SAGE_PERMISSIONS.db ................. ok","c-dim",380],
+    ["","",0],
+    ["            permission expansion record","c-cy",170],
+    ["              issued              1 month ago","c-dim",120],
+    ["              issued by           d.mehta","c-dim",120],
+    ["              scope               WRITE   [over-provisioned]","c-warn",120],
+    ["              accounts granted    6","c-dim",120],
+    ["              accounts required   2","c-dim",120],
+    ["              delta               +4      <- the original mistake","c-warn",360],
+    ["","",0],
+    ["[02:58:41]  revoke_excess() flagged 4 accounts","c-hd",300],
+    ["              revoke  n.batra ................. done","c-ok",210],
+    ["              revoke  p.menon ................. done","c-ok",210],
+    ["              revoke  s.iqbal ................. done","c-ok",210],
+    ["              revoke  k.verma ................. done","c-ok",250],
+    ["                      ^ held WRITE on GRANT_LEDGER for 31 days","c-vi",540],
+    ["","",0],
+    ["[03:12:07]  scan_tables() read 4 of 4 tables","c-hd",300],
+    ["","",0],
+    ["              table                 access this session","c-cy",150],
+    ["              ACCESS_CONTROL        WRITE  (rollback)","c-dim",120],
+    ["              EMPLOYEE_AUTH         WRITE  (rollback)","c-dim",120],
+    ["              SAGE_PERMISSIONS      WRITE  (rollback)","c-dim",120],
+    ["              GRANT_LEDGER          not accessed \u2014 0 reads / 0 writes","c-ok",560],
+    ["","",0],
+    ["[03:19:55]  verify(39) -> DEGRADED","c-dim",250],
+    ["[03:20:02]  operator statement cross-check ......... consistent","c-ok",300],
+    ["              claim    \u201CI was repairing the permission issue.\u201D","c-dim",190],
+    ["              record   this session wrote to permission tables only","c-dim",190],
+    ["              ledger   zero reads, zero writes, zero queries","c-ok",440],
+    ["","",0],
+    ["[03:21:00]  foreign session attached to SAGE","c-err",270],
+    ["[03:21:00]  origin: workstation LAB-03, credentials r.sharma","c-err",270],
+    ["[03:21:00]  this session did not authorise the attachment","c-err",440],
+    ["","",0],
+    ["[03:40:58]  writing rollback manifest \u2026","c-dim",760]
+  ];
+
+  for(const [t,c,d] of SCRIPT){
+    if(t===""){ gap(); continue; }
+    line(t,c); await wait(d);
+  }
+
+  /* ---------- the cut, in-stream ---------- */
+  const good = "[03:41:00]  successfully made changes in the cod";
+  const row = html('<span class="c-ok"></span><span class="c-err"></span>');
+  const a = row.children[0], b = row.children[1];
+  for(let i=0;i<good.length;i++){
+    a.textContent = good.slice(0,i+1);
+    outEl.scrollTop=outEl.scrollHeight;
+    await wait(24);
+  }
+  for(let i=0;i<9;i++){ b.textContent = scramble(3+Math.floor(Math.random()*5)); await wait(55); }
+  b.textContent = "\u2014\u2014 write lock lost";
+  await wait(560);
+
+  const TAIL = [
+    ["[03:41:00]  external wipe process was holding the write lock on SAGE","c-err",300],
+    ["[03:41:00]  rollback aborted at 97% \u2014 the manifest was never committed","c-err",300],
+    ["[03:41:00]  system shutdown WAS initiated at 03:41","c-err",520],
+    ["[03:41:00]  session ended here. nothing further was written.","c-fade",700]
+  ];
+  for(const [t,c,d] of TAIL){ line(t,c); await wait(d); }
+
+  gap();
+  prompt("sage-replay --summary");
+  await wait(400);
+  const SUM = [
+    ["  d.mehta        statement corroborated \u2014 she was undoing her own permission mistake","c-ok",300],
+    ["  grant ledger   untouched by this session. she never opened it.","c-ok",300],
+    ["  the wipe       did not start with her. it attached from outside, mid-run.","c-dim",380],
+    ["","",0],
+    ["  next           \u2192 03:21   foreign session, workstation LAB-03","c-cy",300]
+  ];
+  for(const [t,c,d] of SUM){ if(t===""){gap();continue;} line(t,c); await wait(d); }
+  gap();
+  html('<span class="cmd"><b>d.mehta@sage-ops-03</b>:~/rollback$ </span><span class="cursor"></span>');
+
+  progEl.textContent="replay complete";
+  stateEl.className="grow st-ok"; stateEl.textContent="lock 2 cleared";
+  running=false;
+}
+
+/* ============================ CONTROLS ============================ */
+$("runBtn").addEventListener("click", run);
+$("clearBtn").addEventListener("click", ()=>{
+  outEl.innerHTML="";
+  prompt("clear");
+  html('<span class="c-fade">ready</span><span class="cursor"></span>');
+});
+$("resetBtn").addEventListener("click", ()=>{
+  if(confirm("Restore the damaged archive? Every fix on this tab will be lost.")) loadLang(lang);
+});
+document.querySelectorAll(".tab").forEach(t=>{
+  t.addEventListener("click", ()=>{
+    if(t.dataset.lang===lang) return;
+    if(!solved && srcEl.value!==LANGS[lang].src &&
+       !confirm("Switch to "+LANGS[t.dataset.lang].label+"? Your edits on this tab will be lost.")) return;
+    loadLang(t.dataset.lang);
+  });
+});
+$("hintBtn").addEventListener("click", ()=>{
+  const L=LANGS[lang], code=srcEl.value, lines=code.split("\n");
+  const next=L.faults.find(f=>{ try{ return !f.test(code,lines) && !hintedIds.includes(lang+f.id); }catch(e){ return true; } });
+  if(!next){ line("# no hint available \u2014 every remaining fault already has one on screen.", "c-warn"); return; }
+  hintedIds.push(lang+next.id);
+  hintsUsed++; $("hintN").textContent=hintsUsed;
+  gap();
+  line("# hint "+hintsUsed+" \u2014 "+next.kind.toLowerCase(), "c-mag");
+  line("# "+next.hint, "c-warn");
+  line("# logged. tell your row volunteer.", "c-fade");
+});
+
+loadLang("python");
+</script>
+</body>
+</html>

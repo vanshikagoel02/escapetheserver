@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Escape The Server - ANVIKSHA</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- ================================================================= -->
+  <!-- STATE 0: LOCKED DESKTOP (Meera's Personal Laptop Lock Screen)     -->
+  <!-- ================================================================= -->
+  <div id="lock-screen" class="lock-screen-container">
+    <div class="lock-backdrop-overlay"></div>
+
+    <div class="lock-card lock-card-minimal">
+      <div class="lock-alert-strip">
+        <span class="pulse-dot"></span> EMERGENCY DATA LOCKDOWN — REMOTE WIPE THREAT DETECTED
+      </div>
+
+      <div class="lock-user-profile">
+        <div class="lock-avatar">
+          <div class="avatar-silhouette">MK</div>
+        </div>
+        <h2 class="lock-username">Meera Kapoor</h2>
+      </div>
+
+      <div class="meera-clue-quote" style="color: #facc15; font-size: 13px; font-family: var(--font-mono); font-style: italic; margin-bottom: 16px; text-align: center; text-shadow: 0 0 10px rgba(250, 204, 21, 0.4);">
+        "I did not want one cat, I want eight, just like MOCHI"
+      </div>
+
+      <div class="team-id-strip" id="team-id-strip">
+        <label for="team-id-field">TEAM ID</label>
+        <input type="text" id="team-id-field" placeholder="e.g. TEAM01" autocomplete="off">
+        <button id="team-id-save-btn">SAVE</button>
+      </div>
+
+      <!-- Password Input Form -->
+      <div class="lock-input-group">
+        <input type="password" id="lock-password-input" class="lock-input" placeholder="ENTER AUTHENTICATION PASSWORD" autocomplete="off" autofocus>
+        <button id="lock-login-btn" class="lock-submit-btn">AUTHENTICATE</button>
+      </div>
+
+      <div id="lock-error-msg" class="lock-error hidden"></div>
+
+      <div class="lock-system-tag">
+        STATION ID: MEERA-LAPTOP-WS08 // HOST: EPOCHCORP-INTRANET-SECURE // PROTOCOL: RECOVERY-01
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ================================================================= -->
+  <!-- STATE 1-6: DESKTOP WORKSTATION (Meera's Personal Desktop)          -->
+  <!-- ================================================================= -->
+  <div id="desktop-screen" class="desktop-container hidden">
+    <!-- Desktop Background & Wallpaper Elements -->
+    <div class="desktop-wallpaper">
+      <div class="wallpaper-mesh"></div>
+      
+      <!-- Top Emergency Alert Banner -->
+      <div class="desktop-alert-banner">
+        <div class="alert-content">
+          <span class="alert-icon">⚠️</span>
+          <strong>ACTIVE INCIDENT ALERT:</strong>
+          <span>Remote wipe process detected targeting Financial Vault and Grant Ledgers. Recover evidence fragments before disk sanitization completes!</span>
+        </div>
+      </div>
+
+      <!-- Sticky Note Widget (Meera's Personal Reflection) -->
+      <div class="desktop-sticky-note" id="sticky-note-widget">
+        <div class="sticky-pin">📌</div>
+        <div class="sticky-body">
+          Dad gave me this pen after our worst argument.<br><br>
+          Strange how some things become more valuable after they're almost lost.<br><br>
+          He said a gift means more when you give it after choosing to forgive.<br><br>
+          I've kept it ever since.<br><br>
+          Maybe that's why I don't think of it as a pen anymore.<br>
+          It's a reminder.<br><br>
+          If I ever give this away, it won't be because I forgot what it means.<br><br>
+          It will mean I've chosen to trust someone again.
+        </div>
+        <div class="sticky-footer">— Meera</div>
+      </div>
+
+      <!-- Desk Photo Widget -->
+      <div class="desktop-photo-widget">
+        <div class="photo-frame">
+          <div class="photo-placeholder">
+            <div class="photo-icon">🏛️</div>
+            <div class="photo-caption">EpochCorp Grants Dept • Annual Audit Team</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Desktop Icons Grid -->
+    <div class="desktop-icons-area">
+      <div class="desktop-icon" data-window="suspects" title="Suspects Database — 10 Personnel Records">
+        <div class="icon-graphic icon-dossier">🗂️</div>
+        <div class="icon-label">suspects_db</div>
+      </div>
+
+      <div class="desktop-icon" data-window="server" title="SERVER — Wipe Status, P10 Evidence, recovery_code, nettrace">
+        <div class="icon-graphic icon-server">🖥️</div>
+        <div class="icon-label">SERVER</div>
+      </div>
+
+      <div class="desktop-icon" data-window="cctv" title="CCTV Surveillance Hub">
+        <div class="icon-graphic icon-cctv">📹</div>
+        <div class="icon-label">cctv_hub</div>
+      </div>
+
+      <div class="desktop-icon" data-window="restore" title="Final Investigation Console">
+        <div class="icon-graphic icon-restore">🔐</div>
+        <div class="icon-label">final_investigation</div>
+      </div>
+
+      <div class="desktop-icon" data-window="terminal" title="Forensic Audit Shell">
+        <div class="icon-graphic icon-term">💻</div>
+        <div class="icon-label">recovery_cli</div>
+      </div>
+    </div>
+
+    <!-- =============================================================== -->
+    <!-- DESKTOP WINDOWS CONTAINER                                       -->
+    <!-- =============================================================== -->
+    <div id="windows-container" class="windows-container">
+
+      <!-- Window: Terminal -->
+      <div id="window-terminal" class="os-window" style="top: 60px; left: 80px; width: 840px; height: 560px;">
+        <div class="window-header">
+          <div class="win-title">
+            <span class="win-icon">💻</span> Meera's Laptop :: Forensic Audit Shell (recovery_cli)
+          </div>
+          <div class="win-controls">
+            <button class="win-btn win-btn-min">─</button>
+            <button class="win-btn win-btn-max">□</button>
+            <button class="win-btn win-btn-close">✕</button>
+          </div>
+        </div>
+        <div class="window-body"></div>
+      </div>
+
+      <!-- Window: Code Editor (opened from inside SERVER) -->
+      <div id="window-code" class="os-window hidden" style="top: 70px; left: 140px; width: 880px; height: 580px;">
+        <div class="window-header">
+          <div class="win-title">
+            <span class="win-icon">🐍</span> SERVER/ROOT — recovery_code
+          </div>
+          <div class="win-controls">
+            <button class="win-btn win-btn-min">─</button>
+            <button class="win-btn win-btn-max">□</button>
+            <button class="win-btn win-btn-close">✕</button>
+          </div>
+        </div>
+        <div class="window-body"></div>
+      </div>
+
+      <!-- Window: Network Viewer (opened from inside SERVER) -->
+      <div id="window-network" class="os-window hidden" style="top: 80px; left: 180px; width: 900px; height: 590px;">
+        <div class="window-header">
+          <div class="win-title">
+            <span class="win-icon">🌐</span> SERVER/ROOT — nettrace
+          </div>
+          <div class="win-controls">
+            <button class="win-btn win-btn-min">─</button>
+            <button class="win-btn win-btn-max">□</button>
+            <button class="win-btn win-btn-close">✕</button>
+          </div>
+        </div>
+        <div class="window-body"></div>
+      </div>
+
+      <!-- Window: CCTV Hub -->
+      <div id="window-cctv" class="os-window hidden" style="top: 65px; left: 160px; width: 920px; height: 600px;">
+        <div class="window-header">
+          <div class="win-title">
+            <span class="win-icon">📹</span> Facility Surveillance & Alibi Verification Hub (cctv_hub)
+          </div>
+          <div class="win-controls">
+            <button class="win-btn win-btn-min">─</button>
+            <button class="win-btn win-btn-max">□</button>
+            <button class="win-btn win-btn-close">✕</button>
+          </div>
+        </div>
+        <div class="window-body"></div>
+      </div>
+
+      <!-- Window: Suspects Database -->
+      <div id="window-suspects" class="os-window hidden" style="top: 75px; left: 120px; width: 980px; height: 620px;">
+        <div class="window-header">
+          <div class="win-title">
+            <span class="win-icon">🗂️</span> /suspects_db — 10 Personnel Records
+          </div>
+          <div class="win-controls">
+            <button class="win-btn win-btn-min">─</button>
+            <button class="win-btn win-btn-max">□</button>
+            <button class="win-btn win-btn-close">✕</button>
+          </div>
+        </div>
+        <div class="window-body"></div>
+      </div>
+
+      <!-- Window: Final Investigation Console -->
+      <div id="window-restore" class="os-window hidden" style="top: 70px; left: 150px; width: 860px; height: 580px;">
+        <div class="window-header">
+          <div class="win-title">
+            <span class="win-icon">🔐</span> Final Investigation Console
+          </div>
+          <div class="win-controls">
+            <button class="win-btn win-btn-min">─</button>
+            <button class="win-btn win-btn-max">□</button>
+            <button class="win-btn win-btn-close">✕</button>
+          </div>
+        </div>
+        <div class="window-body"></div>
+      </div>
+
+      <!-- Window: Server Infrastructure Folder -->
+      <div id="window-server" class="os-window hidden" style="top: 90px; left: 190px; width: 980px; height: 620px;">
+        <div class="window-header">
+          <div class="win-title">
+            <span class="win-icon">🖥️</span> Server Infrastructure & Evidence (/SERVER/ROOT)
+          </div>
+          <div class="win-controls">
+            <button class="win-btn win-btn-min">─</button>
+            <button class="win-btn win-btn-max">□</button>
+            <button class="win-btn win-btn-close">✕</button>
+          </div>
+        </div>
+        <div class="window-body"></div>
+      </div>
+
+    </div>
+
+    <!-- =============================================================== -->
+    <!-- DESKTOP TASKBAR (Bottom Bar)                                    -->
+    <!-- =============================================================== -->
+    <div class="desktop-taskbar">
+      <!-- Left: Logo & Stage Indicator -->
+      <div class="taskbar-left">
+        <div class="taskbar-start-btn">
+          <span class="apex-symbol">▲</span> <strong>EPOCHCORP OS</strong>
+        </div>
+        <div class="taskbar-stage-badge" id="taskbar-stage-tag">
+          SLOT 1 OF 3
+        </div>
+      </div>
+
+      <!-- Center: Anti-cheat notice -->
+      <div class="taskbar-center">
+        <div class="taskbar-anticheat-notice">⚠ Do not switch tabs or minimize — doing so ends the game. Right-click / image search is disabled.</div>
+      </div>
+
+      <!-- Right: Threat Timer, Controls & GM -->
+      <div class="taskbar-right">
+        <!-- Emergency Wipe Countdown Timer -->
+        <div class="taskbar-timer-widget" id="taskbar-timer-box" title="System Remote Wipe Countdown">
+          <span class="timer-skull">⏳ WIPE THREAT:</span>
+          <span class="timer-digits" id="taskbar-timer-text">45:00</span>
+        </div>
+
+        <button class="taskbar-btn" id="taskbar-audio-btn" title="Toggle Sound">🔊 Audio: ON</button>
+        <button class="taskbar-btn" id="taskbar-fs-btn" title="Toggle Fullscreen">⛶ Fullscreen</button>
+        <button class="taskbar-btn org-btn-badge" id="taskbar-org-btn" title="Organizer / GM Drawer (Ctrl+Shift+O)">⚙ GM Control</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Stack -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- ================================================================= -->
+  <!-- ANTI-CHEAT: Tab-switch / app-switch violation overlay             -->
+  <!-- ================================================================= -->
+  <div id="violation-screen" class="violation-overlay hidden">
+    <div class="violation-card">
+      <div class="violation-icon">🚫</div>
+      <h1>GAME HALTED</h1>
+      <p>A tab switch or window/app switch was detected at <strong id="violation-timestamp"></strong>.</p>
+      <p class="violation-sub">Please call your Game Master to review and resume your session.</p>
+      <div style="margin-top: 22px;">
+        <button id="violation-gm-btn" class="taskbar-btn org-btn-badge" style="padding: 10px 22px; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">⚙ GM Control (Organizer Login)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- MODALS & DRAWERS                                                  -->
+  <!-- ================================================================= -->
+  <div id="org-modal-container" class="modal-backdrop hidden"></div>
+
+  <!-- Application Bootstrap -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

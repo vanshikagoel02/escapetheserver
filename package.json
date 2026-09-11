@@ -1,0 +1,19 @@
+{
+  "name": "the-epoch-escape-server",
+  "version": "2.0.0",
+  "description": "THE EPOCH - EPOCHCORP EscapeServer Host",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  },
+  "keywords": [
+    "escape-room",
+    "cybersecurity",
+    "forensics"
+  ],
+  "author": "Escape Game Team",
+  "license": "ISC"
+}
