@@ -315,6 +315,37 @@ This was particularly important for the live event because multiple teams were p
 
 ---
 
+## 🔒 Anti-Cheating & Fair Play System
+
+Since THE EPOCH was played simultaneously by 15+ teams in a live, competitive setting, a dedicated fair-play system was built to protect the integrity of the investigation.
+
+### Tab & Window Switch Detection
+
+The application actively monitors each participant's browser session for tab switches or window/app switches during active gameplay.
+
+If a team switches away from the game tab or minimizes the browser mid-investigation:
+
+- The session is **immediately halted**
+- A **GAME HALTED** screen is displayed, along with the exact timestamp of the violation
+- Gameplay cannot continue until an organizer reviews and resumes the session
+- The team's on-screen timer is paused for the duration of the halt, so no time is lost due to a false trigger
+
+This ensured teams could not look up answers, search for hints, or coordinate through another tab while the game was live.
+
+### Organizer-Controlled Resume
+
+Halted sessions can only be resumed by an organizer through the password-protected **GM Control** panel, keeping the decision to continue or penalize a team entirely in the hands of the event organizers rather than automated logic alone.
+
+### Right-Click & Screenshot Search Prevention
+
+Right-click and context-menu access was disabled across the interface to prevent participants from easily reverse-searching evidence, CCTV stills, or on-screen clues (e.g., via Google Lens or similar image-search tools). Long-press image callouts were also disabled for mobile/touch devices for the same reason.
+
+### Violation Logging
+
+Every halt event — including the team, timestamp, and reason — was recorded in the organizer's event log, giving organizers a complete audit trail of any fair-play issues across all teams after the event concluded.
+
+---
+
 ## 🏗️ Technical Architecture
 
 ```text
